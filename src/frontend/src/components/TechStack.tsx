@@ -1,4 +1,4 @@
-import { Music, Palette, Scissors, Sparkles } from "lucide-react";
+import { Palette, Scissors, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 
 const TOOLS = [
@@ -23,19 +23,11 @@ const TOOLS = [
       "Cinematic color grading and correction with DaVinci Resolve's industry-leading Color page. Setting the visual tone of every project.",
     accentColor: "var(--color-amber)",
   },
-  {
-    icon: Music,
-    title: "Sound Design",
-    description:
-      "Audio mixing, SFX layering, and music synchronization to enhance the emotional impact of every edit.",
-    accentColor: "var(--color-teal)",
-  },
 ];
 
 const SKILLS = [
   { label: "Motion Graphics", accent: "amber" },
   { label: "Color Grading", accent: "amber" },
-  { label: "Sound Design", accent: "teal" },
   { label: "Esports Broadcast Graphics", accent: "amber" },
   { label: "Highlight Reel Editing", accent: "teal" },
 ];
@@ -65,8 +57,8 @@ export default function TechStack() {
           />
         </motion.div>
 
-        {/* Four cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+        {/* Three cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {TOOLS.map((tool, i) => (
             <motion.div
               key={tool.title}

@@ -1,18 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { HttpAgent } from "@icp-sdk/core/agent";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, LogIn, Pencil, Plus, Trash2, X } from "lucide-react";
+  ImageIcon,
+  Loader2,
+  LogIn,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { VideoProject } from "../backend.d";
+import { loadConfig } from "../config";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useContactSubmissionsCount,
@@ -21,6 +25,7 @@ import {
   useUpdateVideoProject,
   useVideoProjects,
 } from "../hooks/useQueries";
+import { StorageClient } from "../utils/StorageClient";
 
 const EMPTY_FORM = {
   title: "",
@@ -32,6 +37,145 @@ const EMPTY_FORM = {
 interface AdminPanelProps {
   open: boolean;
   onClose: () => void;
+}
+
+async function uploadFileToStorage(
+  file: File,
+  identity: any,
+  onProgress: (pct: number) => void,
+): Promise<string> {
+  const config = await loadConfig();
+  const agent = new HttpAgent({
+    host: config.backend_host,
+    identity,
+  });
+  if (config.backend_host?.includes("localhost")) {
+    await agent.fetchRootKey().catch(() => {});
+  }
+  const storageClient = new StorageClient(
+    config.bucket_name,
+    config.storage_gateway_url,
+    config.backend_canister_id,
+    config.project_id,
+    agent,
+  );
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { hash } = await storageClient.putFile(bytes, onProgress);
+  return storageClient.getDirectURL(hash);
+}
+
+function FileUploadField({
+  label,
+  accept,
+  currentUrl,
+  onUploaded,
+  identity,
+}: {
+  label: string;
+  accept: string;
+  currentUrl: string;
+  onUploaded: (url: string) => void;
+  identity: any;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const isImage = accept.includes("image");
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setProgress(0);
+    try {
+      const url = await uploadFileToStorage(file, identity, setProgress);
+      onUploaded(url);
+      toast.success(`${label} uploaded`);
+    } catch (_err) {
+      toast.error(`Failed to upload ${label.toLowerCase()}`);
+    } finally {
+      setUploading(false);
+      setProgress(0);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <Label className="text-xs mb-1 block" style={{ color: "#a3a3a3" }}>
+        {label}
+      </Label>
+      {/* Preview */}
+      {currentUrl && isImage && (
+        <div className="mb-2 relative w-full aspect-video rounded-sm overflow-hidden border border-[#3d3d3d]">
+          <img
+            src={currentUrl}
+            alt="thumbnail preview"
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={() => onUploaded("")}
+            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-white hover:bg-black/90 transition-colors"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+      {currentUrl && !isImage && (
+        <p
+          className="text-xs mb-2 truncate"
+          style={{ color: "var(--color-teal)" }}
+        >
+          ✓ File uploaded
+        </p>
+      )}
+      <div className="flex gap-2 items-center">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="gap-2 text-xs border-[#3d3d3d] text-[#a3a3a3] hover:text-white flex-1"
+          data-ocid="admin.upload_button"
+        >
+          {uploading ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Uploading {progress}%
+            </>
+          ) : (
+            <>
+              {isImage ? <ImageIcon size={12} /> : <Upload size={12} />}
+              {currentUrl ? "Replace" : `Upload ${label}`}
+            </>
+          )}
+        </Button>
+        {currentUrl && (
+          <span className="text-xs" style={{ color: "#4a4a4a" }}>
+            or
+          </span>
+        )}
+      </div>
+      {/* Also allow pasting a URL directly */}
+      <Input
+        value={currentUrl}
+        onChange={(e) => onUploaded(e.target.value)}
+        placeholder="…or paste a URL"
+        className="mt-2 border-[#3d3d3d] text-[#e5e5e5] placeholder:text-[#4a4a4a] text-xs"
+        style={{ background: "var(--color-surface)" }}
+        data-ocid="admin.input"
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={handleFile}
+      />
+    </div>
+  );
 }
 
 export default function AdminPanel({ open, onClose }: AdminPanelProps) {
@@ -209,6 +353,37 @@ export default function AdminPanel({ open, onClose }: AdminPanelProps) {
                     </div>
                   </div>
 
+                  {/* Upload instructions */}
+                  <div
+                    className="rounded-sm p-4 border border-dashed border-[#3d3d3d] text-sm"
+                    style={{ background: "#111111", color: "#a3a3a3" }}
+                  >
+                    <p className="font-semibold text-white mb-1">
+                      How to add media
+                    </p>
+                    <ol
+                      className="list-decimal list-inside space-y-1 text-xs"
+                      style={{ color: "#a3a3a3" }}
+                    >
+                      <li>
+                        Click <strong className="text-white">Edit</strong> next
+                        to Gaming Intro or Colour Grading below (or Add New
+                        Project to create one).
+                      </li>
+                      <li>
+                        Use{" "}
+                        <strong className="text-white">Upload Thumbnail</strong>{" "}
+                        to add a cover image, and{" "}
+                        <strong className="text-white">Upload Video</strong> for
+                        the video file — or paste a URL directly.
+                      </li>
+                      <li>
+                        Hit <strong className="text-white">Save Changes</strong>
+                        .
+                      </li>
+                    </ol>
+                  </div>
+
                   {/* Add/Edit form */}
                   {showForm ? (
                     <div
@@ -240,80 +415,27 @@ export default function AdminPanel({ open, onClose }: AdminPanelProps) {
                             data-ocid="admin.input"
                           />
                         </div>
-                        <div>
-                          <Label
-                            className="text-xs mb-1 block"
-                            style={{ color: "#a3a3a3" }}
-                          >
-                            Category
-                          </Label>
-                          <Select
-                            value={form.category}
-                            onValueChange={(v) =>
-                              setForm((f) => ({ ...f, category: v }))
-                            }
-                          >
-                            <SelectTrigger
-                              className="border-[#3d3d3d] text-[#e5e5e5]"
-                              style={{ background: "var(--color-surface)" }}
-                              data-ocid="admin.select"
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent
-                              style={{ background: "var(--color-surface)" }}
-                            >
-                              <SelectItem value="Spec Projects">
-                                Spec Projects
-                              </SelectItem>
-                              <SelectItem value="Creative Re-cuts">
-                                Creative Re-cuts
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label
-                            className="text-xs mb-1 block"
-                            style={{ color: "#a3a3a3" }}
-                          >
-                            Thumbnail URL
-                          </Label>
-                          <Input
-                            value={form.thumbnailUrl}
-                            onChange={(e) =>
-                              setForm((f) => ({
-                                ...f,
-                                thumbnailUrl: e.target.value,
-                              }))
-                            }
-                            placeholder="https://..."
-                            className="border-[#3d3d3d] text-[#e5e5e5] placeholder:text-[#4a4a4a]"
-                            style={{ background: "var(--color-surface)" }}
-                            data-ocid="admin.input"
-                          />
-                        </div>
-                        <div>
-                          <Label
-                            className="text-xs mb-1 block"
-                            style={{ color: "#a3a3a3" }}
-                          >
-                            Video URL
-                          </Label>
-                          <Input
-                            value={form.videoUrl}
-                            onChange={(e) =>
-                              setForm((f) => ({
-                                ...f,
-                                videoUrl: e.target.value,
-                              }))
-                            }
-                            placeholder="https://..."
-                            className="border-[#3d3d3d] text-[#e5e5e5] placeholder:text-[#4a4a4a]"
-                            style={{ background: "var(--color-surface)" }}
-                            data-ocid="admin.input"
-                          />
-                        </div>
+
+                        <FileUploadField
+                          label="Thumbnail Image"
+                          accept="image/*"
+                          currentUrl={form.thumbnailUrl}
+                          onUploaded={(url) =>
+                            setForm((f) => ({ ...f, thumbnailUrl: url }))
+                          }
+                          identity={identity}
+                        />
+
+                        <FileUploadField
+                          label="Video File"
+                          accept="video/*"
+                          currentUrl={form.videoUrl}
+                          onUploaded={(url) =>
+                            setForm((f) => ({ ...f, videoUrl: url }))
+                          }
+                          identity={identity}
+                        />
+
                         <div className="flex gap-3 pt-2">
                           <Button
                             type="button"
@@ -386,6 +508,13 @@ export default function AdminPanel({ open, onClose }: AdminPanelProps) {
                             style={{ background: "#1a1a1a" }}
                             data-ocid={`admin.item.${i + 1}`}
                           >
+                            {project.thumbnailUrl && (
+                              <img
+                                src={project.thumbnailUrl}
+                                alt=""
+                                className="w-12 h-8 object-cover rounded-sm shrink-0 border border-[#3d3d3d]"
+                              />
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-white truncate">
                                 {project.title}

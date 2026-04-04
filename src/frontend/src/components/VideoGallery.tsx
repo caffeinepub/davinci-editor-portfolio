@@ -13,43 +13,21 @@ const SAMPLE_PROJECTS: VideoProject[] = [
     videoUrl: "",
   },
   {
-    id: BigInt(2),
-    title: "Reel / Short",
-    category: "Spec Projects",
-    thumbnailUrl: "",
-    videoUrl: "",
-  },
-  {
     id: BigInt(3),
-    title: "Games Colour Correction",
-    category: "Spec Projects",
-    thumbnailUrl: "",
-    videoUrl: "",
-  },
-  {
-    id: BigInt(4),
-    title: "Sound Design",
+    title: "Colour Grading/Correction",
     category: "Spec Projects",
     thumbnailUrl: "",
     videoUrl: "",
   },
 ];
 
-const RE_CREATES = new Set([
-  "Gaming Video Intro",
-  "Reel / Short",
-  "Sound Design",
-]);
+const RE_CREATES = new Set(["Gaming Video Intro"]);
 
 const DESCRIPTIONS: Record<string, string> = {
   "Gaming Video Intro":
     "High-energy intro sequences built for gaming brands. Fast cuts, motion graphics, and cinematic grading that hook viewers in the first 30 seconds.",
-  "Reel / Short":
-    "Vertical and horizontal reels designed to maximise watch time. Punchy pacing, sound design sync, and platform-native formatting.",
-  "Games Colour Correction":
+  "Colour Grading/Correction":
     "Full colour pipeline in DaVinci Resolve — from raw footage to polished cinematic look. Consistent tone across every frame.",
-  "Sound Design":
-    "Custom audio layers, SFX placement, and music sync that elevate the emotional impact of every cut.",
 };
 
 function MediaPanel({
@@ -136,10 +114,14 @@ export default function VideoGallery() {
   );
   const { data: backendProjects } = useVideoProjects();
 
+  // Filter backend projects to only show the two we care about
+  const allowed = new Set(["Gaming Video Intro", "Colour Grading/Correction"]);
   const projects =
     backendProjects && backendProjects.length > 0
-      ? backendProjects
+      ? backendProjects.filter((p) => allowed.has(p.title))
       : SAMPLE_PROJECTS;
+
+  const displayProjects = projects.length > 0 ? projects : SAMPLE_PROJECTS;
 
   return (
     <section id="work" className="py-24 px-6" style={{ background: "#1a1a1a" }}>
@@ -163,7 +145,7 @@ export default function VideoGallery() {
 
         {/* Alternating panels */}
         <div className="flex flex-col gap-20">
-          {projects.map((project, i) => {
+          {displayProjects.map((project, i) => {
             const mediaLeft = i % 2 === 0;
             return (
               <motion.div

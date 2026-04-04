@@ -1,7 +1,5 @@
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useIsAdmin } from "../hooks/useQueries";
 
 interface NavProps {
   onAdminClick: () => void;
@@ -10,8 +8,6 @@ interface NavProps {
 export default function Nav({ onAdminClick }: NavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { data: isAdmin } = useIsAdmin();
-  const { identity } = useInternetIdentity();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -63,20 +59,18 @@ export default function Nav({ onAdminClick }: NavProps) {
               {link.label}
             </button>
           ))}
-          {identity && isAdmin && (
-            <button
-              type="button"
-              onClick={onAdminClick}
-              className="text-sm font-medium px-3 py-1 rounded border transition-all duration-200 hover:bg-[#f59e0b] hover:text-black"
-              style={{
-                borderColor: "var(--color-amber)",
-                color: "var(--color-amber)",
-              }}
-              data-ocid="nav.open_modal_button"
-            >
-              Admin
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onAdminClick}
+            className="text-sm font-medium px-3 py-1 rounded border transition-all duration-200 hover:bg-[#f59e0b] hover:text-black"
+            style={{
+              borderColor: "var(--color-amber)",
+              color: "var(--color-amber)",
+            }}
+            data-ocid="nav.open_modal_button"
+          >
+            Admin
+          </button>
         </div>
 
         {/* Mobile hamburger */}
@@ -105,20 +99,18 @@ export default function Nav({ onAdminClick }: NavProps) {
               {link.label}
             </button>
           ))}
-          {identity && isAdmin && (
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                onAdminClick();
-              }}
-              className="text-sm font-medium text-left py-1"
-              style={{ color: "var(--color-amber)" }}
-              data-ocid="nav.open_modal_button"
-            >
-              Admin Panel
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setMenuOpen(false);
+              onAdminClick();
+            }}
+            className="text-sm font-medium text-left py-1"
+            style={{ color: "var(--color-amber)" }}
+            data-ocid="nav.open_modal_button"
+          >
+            Admin Panel
+          </button>
         </div>
       )}
     </header>

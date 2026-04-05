@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HttpAgent } from "@icp-sdk/core/agent";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ImageIcon,
   Loader2,
+  Lock,
   LogIn,
   Pencil,
   Plus,
@@ -13,10 +15,11 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { VideoProject } from "../backend.d";
 import { loadConfig } from "../config";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useContactSubmissionsCount,
@@ -180,6 +183,8 @@ function FileUploadField({
 
 export default function AdminPanel({ open, onClose }: AdminPanelProps) {
   const { identity, login, loginStatus } = useInternetIdentity();
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
   const { data: projects, isLoading } = useVideoProjects();
   const { data: submissionsCount } = useContactSubmissionsCount();
   const createProject = useCreateVideoProject();
@@ -189,6 +194,47 @@ export default function AdminPanel({ open, onClose }: AdminPanelProps) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<bigint | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  // Admin activation state
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [adminToken, setAdminToken] = useState("");
+  const [activating, setActivating] = useState(false);
+
+  // Check if the current user is already admin whenever identity or actor changes
+  useEffect(() => {
+    if (!identity || !actor) {
+      setIsAdmin(null);
+      return;
+    }
+    setIsAdmin(null); // reset to loading while we check
+    actor
+      .isCallerAdmin()
+      .then((result) => setIsAdmin(result))
+      .catch(() => setIsAdmin(false));
+  }, [identity, actor]);
+
+  const handleActivateAdmin = async () => {
+    if (!actor || !adminToken.trim()) return;
+    setActivating(true);
+    try {
+      await actor._initializeAccessControlWithSecret(adminToken.trim());
+      // Verify it worked
+      const nowAdmin = await actor.isCallerAdmin();
+      if (nowAdmin) {
+        setIsAdmin(true);
+        setAdminToken("");
+        // Refresh all queries so projects load fresh
+        queryClient.invalidateQueries();
+        toast.success("Admin access activated!");
+      } else {
+        toast.error("Invalid admin token.");
+      }
+    } catch (_err) {
+      toast.error("Invalid admin token.");
+    } finally {
+      setActivating(false);
+    }
+  };
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
@@ -310,6 +356,87 @@ export default function AdminPanel({ open, onClose }: AdminPanelProps) {
                     )}
                     Log In
                   </Button>
+                </div>
+              ) : isAdmin === null ? (
+                /* Checking admin status */
+                <div
+                  className="text-center py-12"
+                  data-ocid="admin.loading_state"
+                >
+                  <Loader2
+                    className="h-6 w-6 animate-spin mx-auto mb-3"
+                    style={{ color: "var(--color-amber)" }}
+                  />
+                  <p className="text-sm" style={{ color: "#a3a3a3" }}>
+                    Checking permissions…
+                  </p>
+                </div>
+              ) : !isAdmin ? (
+                /* Admin token entry */
+                <div className="py-8 space-y-6">
+                  <div className="text-center space-y-2">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+                      style={{
+                        background: "#1a1a1a",
+                        border: "1px solid #3d3d3d",
+                      }}
+                    >
+                      <Lock size={20} style={{ color: "var(--color-amber)" }} />
+                    </div>
+                    <h3 className="text-base font-bold text-white">
+                      Claim Admin Access
+                    </h3>
+                    <p className="text-sm" style={{ color: "#a3a3a3" }}>
+                      Enter your admin token to unlock content management.
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-sm p-5 border border-[#3d3d3d] space-y-4"
+                    style={{ background: "#1a1a1a" }}
+                    data-ocid="admin.panel"
+                  >
+                    <div>
+                      <Label
+                        htmlFor="adminTokenInput"
+                        className="text-xs mb-1 block"
+                        style={{ color: "#a3a3a3" }}
+                      >
+                        Admin Token
+                      </Label>
+                      <Input
+                        id="adminTokenInput"
+                        type="password"
+                        value={adminToken}
+                        onChange={(e) => setAdminToken(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleActivateAdmin();
+                        }}
+                        placeholder="Enter your admin token"
+                        className="border-[#3d3d3d] text-[#e5e5e5] placeholder:text-[#4a4a4a]"
+                        style={{ background: "var(--color-surface)" }}
+                        data-ocid="admin.input"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleActivateAdmin}
+                      disabled={activating || !adminToken.trim()}
+                      className="w-full font-bold gap-2"
+                      style={{
+                        background: "var(--color-amber)",
+                        color: "#0f0f0f",
+                      }}
+                      data-ocid="admin.submit_button"
+                    >
+                      {activating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Lock size={15} />
+                      )}
+                      {activating ? "Activating…" : "Activate Admin"}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>

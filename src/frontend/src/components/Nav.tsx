@@ -1,11 +1,7 @@
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-interface NavProps {
-  onAdminClick: () => void;
-}
-
-export default function Nav({ onAdminClick }: NavProps) {
+export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -59,18 +55,6 @@ export default function Nav({ onAdminClick }: NavProps) {
               {link.label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={onAdminClick}
-            className="text-sm font-medium px-3 py-1 rounded border transition-all duration-200 hover:bg-[#f59e0b] hover:text-black"
-            style={{
-              borderColor: "var(--color-amber)",
-              color: "var(--color-amber)",
-            }}
-            data-ocid="nav.open_modal_button"
-          >
-            Admin
-          </button>
         </div>
 
         {/* Mobile hamburger */}
@@ -99,18 +83,6 @@ export default function Nav({ onAdminClick }: NavProps) {
               {link.label}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              onAdminClick();
-            }}
-            className="text-sm font-medium text-left py-1"
-            style={{ color: "var(--color-amber)" }}
-            data-ocid="nav.open_modal_button"
-          >
-            Admin Panel
-          </button>
         </div>
       )}
     </header>

@@ -10,14 +10,16 @@ const SAMPLE_PROJECTS: VideoProject[] = [
     title: "Gaming Video Intro",
     category: "Spec Projects",
     thumbnailUrl: "",
-    videoUrl: "",
+    videoUrl:
+      "https://drive.google.com/file/d/1HFY85NhZEx49mD0SHPbHFDAoGet8vLrl/preview",
   },
   {
     id: BigInt(3),
     title: "Colour Grading/Correction",
     category: "Spec Projects",
     thumbnailUrl: "",
-    videoUrl: "",
+    videoUrl:
+      "https://drive.google.com/file/d/12NywZKGFv2wiC_-GfJvAe_KxsPGZ6yBE/preview",
   },
 ];
 
@@ -116,12 +118,24 @@ export default function VideoGallery() {
 
   // Filter backend projects to only show the two we care about
   const allowed = new Set(["Gaming Video Intro", "Colour Grading/Correction"]);
-  const projects =
+  const backendFiltered =
     backendProjects && backendProjects.length > 0
       ? backendProjects.filter((p) => allowed.has(p.title))
-      : SAMPLE_PROJECTS;
+      : [];
 
-  const displayProjects = projects.length > 0 ? projects : SAMPLE_PROJECTS;
+  // Merge: use backend data if available, otherwise fall back to SAMPLE_PROJECTS
+  const displayProjects = SAMPLE_PROJECTS.map((sample) => {
+    const fromBackend = backendFiltered.find((b) => b.title === sample.title);
+    if (fromBackend) {
+      // Prefer backend URLs but keep the hardcoded URL if backend has none
+      return {
+        ...fromBackend,
+        videoUrl: fromBackend.videoUrl || sample.videoUrl,
+        thumbnailUrl: fromBackend.thumbnailUrl || sample.thumbnailUrl,
+      };
+    }
+    return sample;
+  });
 
   return (
     <section id="work" className="py-24 px-6" style={{ background: "#1a1a1a" }}>

@@ -9,9 +9,10 @@ const SAMPLE_PROJECTS: VideoProject[] = [
     id: BigInt(1),
     title: "Gaming Video Intro",
     category: "Spec Projects",
-    thumbnailUrl: "",
+    thumbnailUrl:
+      "https://drive.google.com/thumbnail?id=1vD4gptheiBgW2PoCHUaW9ERif3ToPbWL&sz=w1280",
     videoUrl:
-      "https://drive.google.com/file/d/1HFY85NhZEx49mD0SHPbHFDAoGet8vLrl/preview",
+      "https://drive.google.com/file/d/1B9tcthXYq0XdnNidyiE1J_d8VFOGmELy/preview",
   },
   {
     id: BigInt(3),
@@ -62,6 +63,19 @@ function MediaPanel({
             }}
           />
           <div className="w-16 h-16 rounded-full flex items-center justify-center border-2 border-[#f59e0b]/40 group-hover:border-[#f59e0b] group-hover:bg-[#f59e0b]/10 transition-all duration-300">
+            <Play
+              size={28}
+              className="ml-1"
+              style={{ color: "var(--color-amber)" }}
+              fill="currentColor"
+            />
+          </div>
+        </div>
+      )}
+      {/* Play overlay on top of thumbnail */}
+      {project.thumbnailUrl && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center border-2 border-[#f59e0b]/40 group-hover:border-[#f59e0b] group-hover:bg-[#f59e0b]/10 bg-black/40 transition-all duration-300">
             <Play
               size={28}
               className="ml-1"
